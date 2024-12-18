@@ -2,6 +2,7 @@ import os, sys
 import shutil
 import multiprocessing
 import time
+import datetime
 from colorama import *
 
 current_proc_id = None
@@ -9,7 +10,7 @@ current_proc_id = None
 def cprint(color, text, end = "\n"):
     print(color + text + Style.RESET_ALL, end = end)
 
-def kill_proc(proc_id):
+def find_proc(proc_id):
     if os.name != "posix":
         print(Fore.RED + "Fatal: cannot run program out of Linux environment." + Style.RESET_ALL)
         exit(-1)
@@ -18,6 +19,11 @@ def kill_proc(proc_id):
         data = file.readlines()[0].strip().split()
         if data[-1] == "data.txt":# ... grep --color=auto [proc_id] > data.txt
             return False
+    return True
+
+def kill_proc(proc_id):
+    if not find_proc(proc_id):
+        return False
     os.system("kill " + str(proc_id))
     return True
 
@@ -41,7 +47,11 @@ def start_proc(proc, name):
     
 def do_proc(proc_name, name, tl = 1):
     pid = start_proc(proc_name, name)
-    time.sleep(tl)
+    for i in range(int(tl)):
+        time.sleep(1)
+        if not find_proc(pid):
+            return "OK"
+    time.sleep(tl - int(tl))
     if kill_proc(pid):
         return "TLE"
     else:
@@ -97,7 +107,19 @@ def workonce(caseid, datagen, proga, progb, validator, timelimit = 1, stop = Tru
             cprint(Fore.WHITE, "Done. Total %d error(s) in %d case(s). See report at report/ ." % (num_errors, num_cases))
             exit(1)
 
-def work(datagen, proga, progb, validator, timelimit = 1, cases = -1, stop = True):
+def _bench(datagen, prog, timelimit = 1):
+    cprint(Fore.WHITE, "\rGen data...          ", end = "")
+    do_proc(datagen + "> data.in", datagen, tl = 1)
+    cprint(Fore.WHITE, "\rExec program...          ", end = "")
+    if do_proc(prog + " < data.in > " + prog + ".out", prog, tl = timelimit) == "TLE":
+        cprint(Fore.RED, "\rTLE Time Limit Exceeded.")
+    else:
+        cprint(Style.BRIGHT + Fore.GREEN, "\rPASS Process terminated within time limit.")
+
+def bench(datagen, prog, timelimit = 1):
+    _bench(datagen, prog, timelimit)
+
+def judge(datagen, proga, progb, validator, timelimit = 1, cases = -1, stop = True):
     global num_cases, num_errors
     # clear last report
     os.system("rm -rf report")
