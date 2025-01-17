@@ -33,15 +33,15 @@ def start_proc(proc, name):
         exit(-1)
     os.system(proc + " &")
     # get pid
-    os.system("ps a | grep '" + name + "' > data.txt")
+    os.system("ps a > data.txt")
     pid = None
     with open("data.txt","r") as file:
         for line in file.readlines():
-            data = line.strip().split()
-            #print(line.strip())
-            if " ".join(data[4:]).strip().startswith(name):
-                pid = int(data[0])
-                break
+            data = line.strip()
+            if data.endswith(name) or data.endswith("sh -c " + proc + " &"):
+                if int(data.split()[0]) != os.getpid():
+                    pid = int(data.split()[0])
+                    break
         file.close()
     return pid
     
@@ -67,22 +67,22 @@ def parse_validator_report(filename):
 
 num_cases, num_errors = 0, 0
 
-def _workonce(datagen, proga, progb, validator, timelimit = 1):
+def _workonce(datagen, proga, progb, validator, timelimita = 1, timelimitb = 1):
     global num_cases
     cprint(Fore.WHITE, str(num_cases + 1) + " Initialize...          ", end = "")
     proga_out_file = proga + ".out"
     progb_out_file = progb + ".out"
     tle=False
-    cprint(Fore.WHITE, "\r" + str(num_cases + 1) + " Gen data...          ", end = "")
+    cprint(Fore.WHITE, "\r" + str(num_cases + 1) + " Gen data...     ", end = "")
     do_proc(datagen + " > data.in", datagen, tl = 1)
-    cprint(Fore.WHITE, "\r" + str(num_cases + 1) + " Run program 1...          ", end = "")
-    if do_proc(proga + " < data.in > " + proga_out_file, proga, timelimit) == "TLE":
+    cprint(Fore.WHITE, "\r" + str(num_cases + 1) + " Run program 1...", end = "")
+    if do_proc(proga + " < data.in > " + proga_out_file, proga, timelimita) == "TLE":
         tle=True
-    cprint(Fore.WHITE, "\r" + str(num_cases + 1) + " Run program 2...          ", end = "")
-    if do_proc(progb + " < data.in > " + progb_out_file, progb, timelimit) == "TLE":
+    cprint(Fore.WHITE, "\r" + str(num_cases + 1) + " Run program 2...", end = "")
+    if do_proc(progb + " < data.in > " + progb_out_file, progb, timelimitb) == "TLE":
         tle=True
     if not tle:
-        cprint(Fore.WHITE, "\r" + str(num_cases + 1) + " Validate...          ", end = "")
+        cprint(Fore.WHITE, "\r" + str(num_cases + 1) + " Validate...       ", end = "")
         do_proc("python3 " + validator + " " + proga_out_file + " " + progb_out_file + " > validator_report.txt", "python3", tl = 1)
         return parse_validator_report("validator_report.txt")
     else:
@@ -91,35 +91,55 @@ def _workonce(datagen, proga, progb, validator, timelimit = 1):
             file.close()
         return ("TLE", "Time Limit Exceeded.")
 
-def workonce(caseid, datagen, proga, progb, validator, timelimit = 1, stop = True):
+def workonce(datagen, proga, progb, validator, timelimita = 1, timelimitb = 1, stop = True):
     global num_cases, num_errors
-    res = _workonce(datagen, proga, progb, validator, timelimit)
-    cprint(Fore.GREEN + Style.BRIGHT if res[0] == "AC" else Fore.RED, "\r" + str(caseid) + " " + res[0] + " " + res[1])
-    num_cases += 1
+    res = _workonce(datagen, proga, progb, validator, timelimita, timelimitb)
+    cprint(Fore.GREEN + Style.BRIGHT if res[0] == "AC" else Fore.RED, "\r" + str(num_cases + 1) + " " + res[0] + " " + res[1])
     if res[0] != "AC": # if not pass
         num_errors += 1
-        os.mkdir("report/" + str(num_cases))
-        shutil.copyfile("data.in", "report/" + str(num_cases) + "/data.in")
-        shutil.copyfile(proga + ".out", "report/" + str(num_cases) + "/" + proga + ".out")
-        shutil.copyfile(progb + ".out", "report/" + str(num_cases) + "/" + progb + ".out")
-        shutil.copyfile("validator_report.txt", "report/" + str(num_cases) + "/validator_report.txt")
+        os.mkdir("report/" + str(num_cases + 1))
+        shutil.copyfile("data.in", "report/" + str(num_cases + 1) + "/data.in")
+        shutil.copyfile(proga + ".out", "report/" + str(num_cases + 1) + "/" + proga + ".out")
+        shutil.copyfile(progb + ".out", "report/" + str(num_cases + 1) + "/" + progb + ".out")
+        shutil.copyfile("validator_report.txt", "report/" + str(num_cases + 1) + "/validator_report.txt")
         if stop:
-            cprint(Fore.WHITE, "Done. Total %d error(s) in %d case(s). See report at report/ ." % (num_errors, num_cases))
+            cprint(Fore.WHITE, "Done. Total %d error(s) in %d case(s). See report at report/ ." % (num_errors, num_cases + 1))
             exit(1)
+    num_cases += 1
 
-def _bench(datagen, prog, timelimit = 1):
-    cprint(Fore.WHITE, "\rGen data...          ", end = "")
+def _bench(caseid, datagen, prog, timelimit = 1, stop = True):
+    cprint(Fore.WHITE, "\r" + str(caseid) + " Gen data...          ", end = "")
     do_proc(datagen + "> data.in", datagen, tl = 1)
-    cprint(Fore.WHITE, "\rExec program...          ", end = "")
+    cprint(Fore.WHITE, "\r" + str(caseid) + " Exec program...          ", end = "")
     if do_proc(prog + " < data.in > " + prog + ".out", prog, tl = timelimit) == "TLE":
-        cprint(Fore.RED, "\rTLE Time Limit Exceeded.")
+        cprint(Fore.RED, "\r" + str(caseid) + " TLE Time Limit Exceeded.")
+        global num_errors
+        num_errors += 1
+        os.mkdir("report/" + str(caseid))
+        shutil.copyfile("data.in", "report/" + str(caseid) + "/data.in")
+        if stop:
+            exit(1)
     else:
-        cprint(Style.BRIGHT + Fore.GREEN, "\rPASS Process terminated within time limit.")
+        cprint(Style.BRIGHT + Fore.GREEN, "\r" + str(caseid) + " PASS Process terminated within time limit.")
 
-def bench(datagen, prog, timelimit = 1):
-    _bench(datagen, prog, timelimit)
+def bench(datagen, prog, timelimit = 1, cases = -1, stop = True):
+    global num_cases, num_errors
+    os.system("rm -rf report")
+    os.mkdir("report")
+    num_cases = 0
+    if cases == -1:
+        cid = 0
+        while True:
+            cid += 1
+            num_cases += 1
+            _bench(cid, datagen, prog, timelimit, stop)
+    else:
+        num_cases = cases
+        for i in range(1, cases + 1):
+            _bench(i, datagen, prog, timelimit, stop)
+    cprint(Fore.WHITE, "Done. Total %d error(s) in %d case(s). See report at report/ ." % (num_errors, num_cases))
 
-def judge(datagen, proga, progb, validator, timelimit = 1, cases = -1, stop = True):
+def judge(datagen, proga, progb, validator, timelimita = 1, timelimitb = 1, cases = -1, stop = True):
     global num_cases, num_errors
     # clear last report
     os.system("rm -rf report")
@@ -130,8 +150,8 @@ def judge(datagen, proga, progb, validator, timelimit = 1, cases = -1, stop = Tr
         cid = 0
         while True:
             cid += 1
-            workonce(cid, datagen, proga, progb, validator, timelimit, stop)
+            workonce(datagen, proga, progb, validator, timelimita, timelimitb, stop)
     else:
         for i in range(1, cases + 1):
-            workonce(i, datagen, proga, progb, validator, timelimit, stop)
+            workonce(datagen, proga, progb, validator, timelimita, timelimitb, stop)
     cprint(Fore.WHITE, "Done. Total %d error(s) in %d case(s). See report at report/ ." % (num_errors, num_cases))

@@ -6,18 +6,17 @@
 # Mind that you will need a python environment to build.
 
 # build environment
-python3 -m pip install -U colorama nuitka
+rm -rf ~/.cvaldata
+mkdir ~/.cvaldata
+sudo python3 -m pip install -U colorama nuitka -i https://mirrors.aliyun.com/pypi/simple/
 # build validators
-mkdir ~/.cval
-cp -r validators ~/.cval/
+cp -r ./validators ~/.cvaldata/validators
 # compile program
-python3 -m nuitka --follow-imports main.py
-cp ./main.bin ./cval
-cp ./cval ~
-# backup files
-mkdir ~/cval/src
-cp make.sh          ~/.cval/src/
-cp main.py          ~/.cval/src/
-cp cval             ~/.cval/src/
-cp -r lib           ~/.cval/src/
-cp -r validators    ~/.cval/src/
+sudo sh -c 'python3 -m nuitka --follow-imports main.py'
+cat main.bin > cval
+cat cval > ~/.cvaldata/cval
+chmod 777 ~/.cvaldata/cval
+
+# register as command
+sudo sh -c 'echo alias cval=\"~/.cvaldata/cval\" >> /etc/bash.bashrc'
+source /etc/bash.bashrc
