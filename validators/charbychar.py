@@ -3,8 +3,8 @@ class CharByChar(lib.Validator):
     def __init__(self):
         super(CharByChar, self).__init__()
     def judge(self, filea, fileb):
-        contenta = "\n".join(self.filea_read())
-        contentb = "\n".join(self.fileb_read())
+        contenta = self.filea_read()
+        contentb = self.fileb_read()
         contenta = contenta.rstrip("\n")
         contentb = contentb.rstrip("\n")
         if len(contenta) != len(contentb):

@@ -3,8 +3,8 @@ class Noip(lib.Validator):
     def __init__(self):
         super(Noip, self).__init__()
     def judge(self, filea, fileb):
-        contenta = self.filea_read()
-        contentb = self.fileb_read()
+        contenta = self.filea_read().split("\n")
+        contentb = self.fileb_read().split("\n")
         for i in range(len(contenta) - 1, -1, -1):
             if contenta[i].rstrip() == "":
                 del contenta[i]

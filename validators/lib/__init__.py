@@ -60,12 +60,12 @@ class Validator:
         self.buf_a = Buffer(self._filea_read())
         self.buf_b = Buffer(self._fileb_read())
     def _filea_read(self):
-        with open(sys.argv[1], "r") as file:
+        with open(sys.argv[2], "r") as file:
             content = '\n'.join(file.readlines())
             file.close()
         return content
     def _fileb_read(self):
-        with open(sys.argv[2], "r") as file:
+        with open(sys.argv[3], "r") as file:
             content = '\n'.join(file.readlines())
             file.close()
         return content
